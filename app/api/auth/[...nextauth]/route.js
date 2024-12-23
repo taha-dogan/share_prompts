@@ -10,34 +10,42 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
-
-  async session({ session }) {
-    const sessionUser = await User.findOne({ email: session.user.email });
-    session.user.id = sessionUser._id.toString();
-    return session;
-  },
-
-  async SignIn({ profile }) {
-    try {
+  callbacks: {
+    async session({ session }) {
       await connectToDB();
-
-      //check if user is already in the database
-      const UserExists = await User.findOne({ email: profile.email });
-
-      //if user is not exists, create a new user
-      if (!UserExists) {
-        await User.create({
-          email: profile.email,
-          username: profile.name.replace(" ", "").toLowerCase(),
-          image: profile.picture,
-        });
+      if (session?.user?.email) {
+        const sessionUser = await User.findOne({ email: session.user.email });
+        if (sessionUser) {
+          // Safely assign id only if sessionUser is found
+          session.user.id = sessionUser._id.toString();
+          console.log("userId", session.user.id);
+        }
       }
+      return session;
+    },
 
-      return true;
-    } catch (error) {
-      console.log(error);
-      return false;
-    }
+    async SignIn({ profile }) {
+      try {
+        await connectToDB();
+
+        //check if user is already in the database
+        const UserExists = await User.findOne({ email: profile.email });
+
+        //if user is not exists, create a new user
+        if (!UserExists) {
+          await User.create({
+            email: profile.email,
+            username: profile.name.replace(" ", "").toLowerCase(),
+            image: profile.picture,
+          });
+        }
+
+        return true;
+      } catch (error) {
+        console.log(error);
+        return false;
+      }
+    },
   },
 });
 

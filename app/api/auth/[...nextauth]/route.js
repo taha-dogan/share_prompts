@@ -16,7 +16,6 @@ const handler = NextAuth({
       if (session?.user?.email) {
         const sessionUser = await User.findOne({ email: session.user.email });
         if (sessionUser) {
-          // Safely assign id only if sessionUser is found
           session.user.id = sessionUser._id.toString();
           console.log("userId", session.user.id);
         }
@@ -24,25 +23,29 @@ const handler = NextAuth({
       return session;
     },
 
-    async SignIn({ profile }) {
+    async signIn({ profile }) {
       try {
         await connectToDB();
+        console.log("Profile:", profile);
 
-        //check if user is already in the database
-        const UserExists = await User.findOne({ email: profile.email });
+        const userExists = await User.findOne({ email: profile.email });
+        console.log("User exists:", userExists);
 
-        //if user is not exists, create a new user
-        if (!UserExists) {
-          await User.create({
+        if (!userExists) {
+          const username = profile.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          const newUser = await User.create({
             email: profile.email,
-            username: profile.name.replace(" ", "").toLowerCase(),
+            username: username,
             image: profile.picture,
           });
+          console.log("New user created:", newUser);
+        } else {
+          console.log("User already exists, no need to create a new one.");
         }
 
         return true;
       } catch (error) {
-        console.log(error);
+        console.log("Error in signIn callback:", error);
         return false;
       }
     },
